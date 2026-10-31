@@ -1,0 +1,39 @@
+RECVEC - CONTROLE DE USUÁRIOS
+
+CORREÇÃO DE SEGURANÇA
+
+Esta versão bloqueia usuários desativados diretamente nas regras do Firestore.
+A publicação das regras é obrigatória para o bloqueio valer no site, aplicativo
+e demais clientes conectados ao mesmo projeto Firebase.
+
+1. Abra o CMD nesta pasta:
+
+   cd /d "C:\Users\zumzu\Desktop\recuperadora-desktop"
+
+2. Publique a regra de segurança:
+
+   firebase use projetointegrador-4f2dd
+   firebase deploy --only "firestore:rules"
+
+3. Abra o software:
+
+   npm start
+
+COMO O BLOQUEIO FUNCIONA
+
+- O administrador altera o perfil para ativo = false.
+- As regras do Firestore recusam imediatamente leituras e gravações da conta.
+- O site acompanha o perfil em tempo real e encerra a sessão.
+- O aplicativo móvel atualizado também acompanha o perfil em tempo real.
+
+IMPORTANTE
+
+Desativar preserva o histórico e os vínculos do usuário. A conta pode ser
+reativada posteriormente sem recriação.
+
+CONTA INCOMPLETA
+
+Se o software disser que o e-mail já existe, abra Firebase Console >
+Authentication > Users e verifique se existe uma conta criada sem documento
+correspondente na coleção usuarios. Remova apenas essa conta incompleta e tente
+novamente.

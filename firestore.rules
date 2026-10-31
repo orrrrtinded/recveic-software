@@ -1,0 +1,56 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownProfile() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid));
+    }
+
+    function hasActiveProfile() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+        && ownProfile().data.ativo == true;
+    }
+
+    function isAdmin() {
+      return hasActiveProfile()
+        && ownProfile().data.cargo == "administrador";
+    }
+
+    match /usuarios/{userId} {
+      allow get: if signedIn() && (userId == request.auth.uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isAdmin() || (
+        signedIn()
+        && userId == request.auth.uid
+        && !exists(/databases/$(database)/documents/_controle_acesso/primeiro_admin)
+        && request.resource.data.cargo == "administrador"
+        && request.resource.data.ativo == true
+      );
+      allow update, delete: if isAdmin();
+    }
+
+    match /_controle_acesso/primeiro_admin {
+      allow create: if signedIn()
+        && !exists(/databases/$(database)/documents/_controle_acesso/primeiro_admin)
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.cargo == "administrador";
+      allow read: if isAdmin();
+    }
+
+    match /{collection}/{document=**} {
+      allow read, write: if hasActiveProfile() && collection in [
+        "clientes",
+        "veiculos",
+        "orcamentos",
+        "ordens_servico",
+        "pagamentos",
+        "_counters"
+      ];
+    }
+  }
+}

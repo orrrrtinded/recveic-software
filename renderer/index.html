@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>RecVec | Controle de usuários</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="refinement.css">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="/firebase-init.js"></script>
+  <script src="validation.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="ambient ambient-one" aria-hidden="true"></div>
+  <div class="ambient ambient-two" aria-hidden="true"></div>
+
+  <main class="app-shell">
+    <header class="appbar">
+      <div class="brand" aria-label="RecVec">
+        <span class="brand-mark">R</span>
+        <span class="brand-copy">
+          <strong>RECVEC</strong>
+          <small>Controle de acesso</small>
+        </span>
+      </div>
+      <div id="session-bar" class="session-bar" hidden>
+        <span class="live-dot" aria-hidden="true"></span>
+        <span id="session"></span>
+        <button id="logout" class="button button-ghost button-small" type="button">Sair</button>
+      </div>
+    </header>
+
+    <section id="login" class="login-view">
+      <div class="login-intro">
+        <span class="eyebrow">Área administrativa</span>
+        <h1>Gestão de acessos</h1>
+        <p>Gerencie contas, cargos e permissões de acesso do RecVec.</p>
+        <div class="channel-list" aria-label="Canais protegidos">
+          <span><i></i> Site</span>
+          <span><i></i> Aplicativo</span>
+          <span><i></i> Painel administrativo</span>
+        </div>
+      </div>
+
+      <article class="panel login-card">
+        <div class="panel-heading">
+          <span class="section-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.8 8.4 7 10 4.2-1.6 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.7 1.7 3.6-4"/></svg>
+          </span>
+          <div>
+            <p class="eyebrow">Painel da equipe</p>
+            <h2>Entrar no RecVec</h2>
+          </div>
+        </div>
+        <p class="panel-description">Use sua conta administrativa para continuar.</p>
+        <form id="login-form" class="form-stack" novalidate>
+          <label class="field">
+            <span>E-mail</span>
+            <input id="login-email" maxlength="254" type="email" autocomplete="username" placeholder="voce@empresa.com" required>
+          </label>
+          <label class="field">
+            <span>Senha</span>
+            <input id="login-password" type="password" autocomplete="current-password" placeholder="Digite sua senha" required>
+          </label>
+          <button id="login-submit" class="button button-primary" type="submit">
+            <span>Entrar no painel</span><b aria-hidden="true">→</b>
+          </button>
+        </form>
+        <p id="login-status" class="status" role="status" aria-live="polite"></p>
+      </article>
+    </section>
+
+    <section id="admin" class="admin-view" hidden>
+      <div class="page-heading">
+        <div>
+          <p class="eyebrow">Administração</p>
+          <h1>Usuários e acessos</h1>
+          <p>Controle quem entra no RecVec e onde cada conta pode trabalhar.</p>
+        </div>
+        <button id="focus-create" class="button button-primary button-compact" type="button">
+          <span aria-hidden="true">＋</span> Novo usuário
+        </button>
+      </div>
+
+      <div class="summary-grid" aria-label="Resumo dos usuários">
+        <article class="summary-card">
+          <span class="summary-label">Total de contas</span>
+          <strong id="stat-total">0</strong>
+          <small>Cadastradas no RecVec</small>
+        </article>
+        <article class="summary-card summary-card-active">
+          <span class="summary-label"><i></i> Ativos</span>
+          <strong id="stat-active">0</strong>
+          <small>Com acesso liberado</small>
+        </article>
+        <article class="summary-card summary-card-inactive">
+          <span class="summary-label"><i></i> Desativados</span>
+          <strong id="stat-inactive">0</strong>
+          <small>Sem acesso aos dados</small>
+        </article>
+      </div>
+
+      <aside id="admin-alert" class="admin-alert" hidden>
+        <div class="admin-alert-mark">!</div>
+        <div>
+          <strong>O banco recusou o gerenciamento de usuários</strong>
+          <p>Publique as regras desta pasta no projeto correto. Se já publicou, confirme no Firestore se sua própria conta possui <b>cargo: administrador</b> e <b>ativo: true</b>.</p>
+          <code>firebase deploy --only "firestore:rules"</code>
+        </div>
+      </aside>
+
+      <div class="workspace-grid">
+        <article id="create-card" class="panel create-panel">
+          <div class="panel-heading">
+            <span class="section-number">01</span>
+            <div>
+              <p class="eyebrow">Novo acesso</p>
+              <h2>Criar usuário</h2>
+            </div>
+          </div>
+          <p class="panel-description">Preencha os dados e confira os acessos antes de criar a conta.</p>
+          <form id="create-form" class="form-stack" novalidate>
+            <label class="field">
+              <span>Nome completo</span>
+              <input id="name" maxlength="100" autocomplete="name" placeholder="Ex.: João da Silva" required>
+            </label>
+            <label class="field">
+              <span>E-mail</span>
+              <input id="email" maxlength="254" type="email" autocomplete="off" placeholder="usuario@empresa.com" required>
+            </label>
+            <label class="field">
+              <span>Senha temporária</span>
+              <input id="password" maxlength="128" type="password" minlength="6" autocomplete="new-password" placeholder="Mínimo de 6 caracteres" required>
+            </label>
+            <label class="field">
+              <span>Cargo e canais</span>
+              <select id="role">
+                <option value="usuario">Usuário · Site e aplicativo</option>
+                <option value="administrador">Administrador · Todos os canais</option>
+              </select>
+            </label>
+            <div id="role-preview" class="role-preview" aria-live="polite"></div>
+            <button id="create-submit" class="button button-primary" type="submit">
+              <span>Criar e liberar acesso</span><b aria-hidden="true">→</b>
+            </button>
+          </form>
+          <p id="create-status" class="status" role="status" aria-live="polite"></p>
+        </article>
+
+        <article class="panel users-panel">
+          <div class="panel-heading users-heading">
+            <span class="section-number">02</span>
+            <div>
+              <p class="eyebrow">Equipe</p>
+              <h2>Contas cadastradas</h2>
+            </div>
+          </div>
+
+          <div class="users-toolbar">
+            <label class="search-box">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg>
+              <input id="user-search" type="search" placeholder="Buscar por nome ou e-mail">
+            </label>
+            <div class="filter-group" role="group" aria-label="Filtrar usuários">
+              <button class="filter-chip is-active" type="button" data-filter="todos" aria-pressed="true">Todos</button>
+              <button class="filter-chip" type="button" data-filter="ativos" aria-pressed="false">Ativos</button>
+              <button class="filter-chip" type="button" data-filter="desativados" aria-pressed="false">Desativados</button>
+            </div>
+          </div>
+
+          <p id="admin-action-status" class="status status-inline" role="status" aria-live="polite"></p>
+          <p id="result-count" class="result-count" role="status"></p>
+          <div id="list" class="people-list" aria-live="polite"></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="denied" class="denied-view panel" hidden>
+      <span class="section-icon section-icon-danger" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg>
+      </span>
+      <p class="eyebrow">Acesso restrito</p>
+      <h2>Este painel é exclusivo para administradores.</h2>
+      <p>Sua conta continua válida nos canais permitidos, mas não pode gerenciar usuários.</p>
+      <button id="denied-logout" class="button button-secondary" type="button">Voltar para o login</button>
+    </section>
+  </main>
+
+  <dialog id="role-dialog" class="dialog">
+    <form id="role-form" method="dialog">
+      <div class="dialog-icon" aria-hidden="true">↗</div>
+      <p class="eyebrow">Alterar permissão</p>
+      <h2 id="role-dialog-title">Editar cargo</h2>
+      <p id="role-dialog-copy" class="dialog-copy"></p>
+      <label class="field">
+        <span>Novo cargo</span>
+        <select id="role-dialog-select">
+          <option value="usuario">Usuário · Site e aplicativo</option>
+          <option value="administrador">Administrador · Todos os canais</option>
+        </select>
+      </label>
+      <p id="role-status" class="status" role="status"></p>
+      <div class="dialog-actions">
+        <button class="button button-ghost" type="button" data-close-dialog="role-dialog">Cancelar</button>
+        <button id="role-save" class="button button-primary" type="submit">Salvar cargo</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="access-dialog" class="dialog">
+    <form id="access-form" method="dialog">
+      <div class="dialog-icon dialog-icon-danger" aria-hidden="true">!</div>
+      <p class="eyebrow">Interromper acesso</p>
+      <h2 id="access-dialog-title">Desativar usuário?</h2>
+      <p id="access-dialog-copy" class="dialog-copy"></p>
+      <div class="access-warning">
+        <span class="live-dot danger-dot" aria-hidden="true"></span>
+        A conta será preservada. O acesso aos dados será bloqueado pelas regras do banco configuradas no projeto.
+      </div>
+      <p id="access-status" class="status" role="status"></p>
+      <div class="dialog-actions">
+        <button class="button button-ghost" type="button" data-close-dialog="access-dialog">Cancelar</button>
+        <button id="access-confirm" class="button button-danger" type="submit">Desativar acesso</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="connection-status" class="connection-status" role="status" hidden>Sem conexão. Aguarde a internet voltar para alterar os acessos.</div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
